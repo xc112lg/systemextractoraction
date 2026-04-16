@@ -7,6 +7,9 @@ on:
         description: "Direct ROM zip URL"
         required: true
 
+permissions:
+  contents: write   # 🔥 REQUIRED FIX
+
 jobs:
   extract:
     runs-on: ubuntu-latest
@@ -15,7 +18,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y brotli python3 unzip git
+          sudo apt install -y brotli python3 unzip git wget
 
       - name: Download ROM
         run: |
@@ -24,19 +27,12 @@ jobs:
       - name: Extract ROM
         run: |
           unzip rom.zip -d rom
-          cd rom
-          ls
 
-      - name: Find system.new.dat.br
+      - name: Find system files
         run: |
           cd rom
-          FILE=$(find . -name "system.new.dat.br" | head -n 1)
-          echo "Found: $FILE"
-          cp "$FILE" ../system.new.dat.br
-
-          TLIST=$(find . -name "system.transfer.list" | head -n 1)
-          echo "Found: $TLIST"
-          cp "$TLIST" ../system.transfer.list
+          cp $(find . -name "system.new.dat.br" | head -n 1) ../system.new.dat.br
+          cp $(find . -name "system.transfer.list" | head -n 1) ../system.transfer.list
 
       - name: Decompress brotli
         run: |
