@@ -1,0 +1,57 @@
+name: Extract System IMG (dat.br → img)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ROM_URL:
+        description: "Direct ROM zip URL"
+        required: true
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y brotli python3 unzip git
+
+      - name: Download ROM
+        run: |
+          wget "${{ github.event.inputs.ROM_URL }}" -O rom.zip
+
+      - name: Extract ROM
+        run: |
+          unzip rom.zip -d rom
+          cd rom
+          ls
+
+      - name: Find system.new.dat.br
+        run: |
+          cd rom
+          FILE=$(find . -name "system.new.dat.br" | head -n 1)
+          echo "Found: $FILE"
+          cp "$FILE" ../system.new.dat.br
+
+          TLIST=$(find . -name "system.transfer.list" | head -n 1)
+          echo "Found: $TLIST"
+          cp "$TLIST" ../system.transfer.list
+
+      - name: Decompress brotli
+        run: |
+          brotli --decompress system.new.dat.br -o system.new.dat
+
+      - name: Convert DAT → IMG
+        run: |
+          git clone https://github.com/xpirt/sdat2img.git
+          python3 sdat2img/sdat2img.py system.transfer.list system.new.dat system.img
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: extracted-system-${{ github.run_id }}
+          name: Extracted System IMG
+          files: system.img
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
